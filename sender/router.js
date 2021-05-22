@@ -87,14 +87,3 @@ router.get('/send', async (req, res) => {
 });
 
 module.exports = router;
-
-/**
-const KEY = Buffer.from(crypto.randomBytes(32), 'utf8');
-
-const aesCipher = aes256gcm(KEY);
-
-const [encrypted, iv, authTag] = aesCipher.encrypt('hello, world');
-const decrypted = aesCipher.decrypt(encrypted, iv, authTag);
-
-console.log(decrypted);
- */
