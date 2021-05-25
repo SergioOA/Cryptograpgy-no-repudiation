@@ -9,7 +9,7 @@ const rsaManager = new RSAManager();
 
 let encryptedMessage = "";
 let authTag = "";
-let aesSeed = "";
+let iv = "";
 
 router.post('/webhook', async (req, res) => {
 	
@@ -23,11 +23,14 @@ router.post('/webhook', async (req, res) => {
 
 	// We verify the message and get the data
 	try {
+		/**
+		 * Todo: usar hash para la firma en vez de todo el mensaje
+		 */
 		const verified = publicKey.verify(receivedData.signed, "hex", "text");
 		const verifiedJSON = JSON.parse(verified);
 		encryptedMessage = verifiedJSON.encrypted;
 		authTag = bic.hexToBuf(verifiedJSON.authTag);
-		aesSeed = bic.hexToBuf(verifiedJSON.aesSeed);
+		iv = bic.hexToBuf(verifiedJSON.iv);
 
 		console.log(chalk.blueBright("Se ha verificado la signature correctamente."));
 
@@ -44,13 +47,13 @@ router.post('/webhook', async (req, res) => {
 			// We ask the TTP for the key, it has been encrypted using our public key, so we
 			// must decrypt it before using it.
 			const keyData = await axios.get("http://localhost:3021/getKey");
-			const key = rsaManager.decrypt(keyData.data.key, "hex", "text");
-			const keyBuffer = bic.hexToBuf(key);
-			console.log(chalk.magenta("Se ha recibido una respuesta de la TTP!", key));
+			const aesSeed = rsaManager.decrypt(keyData.data.aesSeed, "hex", "text");
+			const aesSeedBuffer = bic.hexToBuf(aesSeed);
+			console.log(chalk.magenta("Se ha recibido una respuesta de la TTP!", aesSeed));
 
 			// Now we can finally decrypt the original message using the key we got from the TTP.
-			const aesCipher = aes256gcm(aesSeed);
-			const decriptedMsg = aesCipher.decrypt(encryptedMessage, keyBuffer, authTag);
+			const aesCipher = aes256gcm(aesSeedBuffer);
+			const decriptedMsg = aesCipher.decrypt(encryptedMessage, iv, authTag);
 
 			// Yayyyyy! Finally decrypted!
 			console.log(decriptedMsg)

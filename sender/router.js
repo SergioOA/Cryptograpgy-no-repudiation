@@ -5,26 +5,27 @@ const bic = require('bigint-conversion');
 const {RSAManager,RSAPublicKey} = require('./utils/rsa');
 const aes256gcm = require('./utils/aes');
 const crypto = require('crypto');
-const aesSeed = Buffer.from(crypto.randomBytes(32), 'utf8');
 const rsaManager = new RSAManager();
-const aesCipher = aes256gcm(aesSeed);
+
+/**
+ * TODO: Agregar timestamp, origin, destinations
+ */
 
 router.get('/send', async (req, res) => {
 
-	res.json("done")
-	
 	// Message we want to send
 	const msg = 'Este es un mensaje con no-repudio!';
 
 	// We are gonna send the message encrypted using aes-256-gcm but
-	// we are not gonna send him the IV, so he won't be able to decrypt
-	// the message without the information we will send to the TTP.
+	// we are not gonna send him the seed so he won't be able to decrypt
+	// the message. He will need to message the TTP to get it.
+	const aesSeed = Buffer.from(crypto.randomBytes(32), 'utf8');
+	const aesCipher = aes256gcm(aesSeed);
 	const [encrypted, iv, authTag] = aesCipher.encrypt(msg);
-	console.log(authTag)
 	const encryptionData = JSON.stringify({
 		encrypted,
 		authTag: bic.bufToHex(authTag),
-		aesSeed: bic.bufToHex(aesSeed)
+		iv: bic.bufToHex(iv)
 	});
 
 	// We must sign the data so the reciver knows it's us.
@@ -63,13 +64,11 @@ router.get('/send', async (req, res) => {
 		console.log(chalk.cyanBright("La información recibida se corresponde con la enviada."));
 
 		// We know the receiver received the message correctly, so we
-		// can send the key to decrypt the message to the TTP.
-		console.log("temp key: ")
-		console.log(bic.bufToHex(iv))
-		const signedKey = publicKey.encrypt(bic.bufToHex(iv), "text", "hex");
+		// can send the aes seed to decrypt the message to the TTP.
+		const signedKey = publicKey.encrypt(bic.bufToHex(aesSeed), "text", "hex");
 		console.log(chalk.green("Enviando mensaje a la TTP:", signedKey))
 		const ttpConfirmation = await axios.post("http://localhost:3021/webhook", {
-			key: signedKey
+			aesSeed: signedKey
 		});
 
 		console.log(chalk.magenta("Se ha recibido una respuesta de la TTP!", JSON.stringify(ttpConfirmation.data)));
