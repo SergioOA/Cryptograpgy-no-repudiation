@@ -7,14 +7,15 @@ const aes256gcm = require('./utils/aes');
 const crypto = require('crypto');
 const rsaManager = new RSAManager();
 
-/**
- * TODO: Agregar timestamp, origin, destinations
- */
-
 router.get('/send', async (req, res) => {
 
 	// Message we want to send
-	const msg = 'Este es un mensaje con no-repudio!';
+	const msg = JSON.stringify({
+		content: "This message was sent using no repudiation!",
+		timestamp: new Date().toISOString(),
+		origin: "server 1",
+		destination: "server 2"
+	});
 
 	// We are gonna send the message encrypted using aes-256-gcm but
 	// we are not gonna send him the seed so he won't be able to decrypt
@@ -68,7 +69,10 @@ router.get('/send', async (req, res) => {
 		const signedKey = publicKey.encrypt(bic.bufToHex(aesSeed), "text", "hex");
 		console.log(chalk.green("Enviando mensaje a la TTP:", signedKey))
 		const ttpConfirmation = await axios.post("http://localhost:3021/webhook", {
-			aesSeed: signedKey
+			aesSeed: signedKey,
+			timestamp: new Date().toISOString(),
+			origin: "server 1",
+			destination: "TTP"
 		});
 
 		console.log(chalk.magenta("Se ha recibido una respuesta de la TTP!", JSON.stringify(ttpConfirmation.data)));

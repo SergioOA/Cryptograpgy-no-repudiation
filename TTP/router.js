@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const chalk = require('chalk');
-const {RSAManager,RSAPublicKey} = require('./utils/rsa');
+const {RSAManager} = require('./utils/rsa');
 
 const rsaManager = new RSAManager();
 let aesSeed = "";

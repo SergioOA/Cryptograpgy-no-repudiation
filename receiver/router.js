@@ -39,6 +39,9 @@ router.post('/webhook', async (req, res) => {
 		res.send({
 			signed: rsaManager.sign(JSON.stringify(verifiedJSON), "text", "hex"),
 			publicKey: rsaManager.getPublicKey().toJSON(),
+			timestamp: new Date().toISOString(),
+			origin: "server 2",
+			destination: "server 1"
 		});
 
 		// We wait 1 second to give time to the sender to give the key to the TTP.
